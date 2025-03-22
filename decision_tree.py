@@ -127,4 +127,58 @@ plt.show()
 # print(random_forest_model.score(X_test, T_test))
 
 # Extract feature importances
-print(model.tree_)
+
+def export_tree_structure(decision_tree, feature_names):
+    """
+    Exports the structure of a decision tree into a dictionary format.
+    """
+    tree = decision_tree.tree_
+    tree_structure = []
+
+    for i in range(tree.node_count):
+        node = {
+            "node_id": i,
+            "feature": feature_names[tree.feature[i]] if tree.feature[i] != -2 else "leaf",
+            "threshold": float(tree.threshold[i]) if tree.feature[i] != -2 else None,
+            "left_child": int(tree.children_left[i]) if tree.children_left[i] != -1 else None,
+            "right_child": int(tree.children_right[i]) if tree.children_right[i] != -1 else None,
+            "value": tree.value[i].tolist() if tree.feature[i] == -2 else None,
+        }
+        tree_structure.append(node)
+
+    return tree_structure
+
+# Export the tree structure
+feature_names = X_train.columns.tolist()
+tree_structure = export_tree_structure(model, feature_names)
+print(tree_structure)
+
+with open("decision_tree_structure.json", "w") as f:
+    json.dump(tree_structure, f, indent=4)
+
+
+def predict(tree_structure, input):
+    curr_node = tree_structure[0]
+    while curr_node["feature"] != "leaf":
+        if input[curr_node["feature"]] <= curr_node["threshold"]:
+            curr_node = tree_structure[curr_node["left_child"]]
+        else:
+            curr_node = tree_structure[curr_node["right_child"]]
+    prediction = np.argmax(curr_node["value"][0])
+    prediction = ["Pizza", "Shawarma", "Sushi"][prediction]
+    return prediction
+
+
+# Making sure that predictions from tree_structure and model are the same
+
+# accuracy_tree = 0
+# accuracy_tree_structure = 0
+# for i in range(len(X_train)):
+#     if (predict(tree_structure, X_train.iloc[i]) == T_train.iloc[i]):
+#         accuracy_tree_structure += 1
+#     if (model.predict([X_train.iloc[i]]) == T_train.iloc[i]):
+#         accuracy_tree += 1
+# accuracy_tree = accuracy_tree / len(X_train)
+# accuracy_tree_structure = accuracy_tree_structure / len(X_train)
+# print(accuracy_tree)
+# print(accuracy_tree_structure)
