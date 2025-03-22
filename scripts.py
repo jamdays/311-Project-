@@ -73,10 +73,10 @@ def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         return cols[0: len(cols)]
 
     def find_digits(string):
-    ##careful for index here change it later
-    return [x for x in range(51) if (string.find(str(x)) != -1 and 
-                                     (string.find(str(x)) == 0 or string[(string.find(str(x)) -1)] != "." or
-                                     string.find(str(x)) == 1 or string[(string.find(str(x)) -2)] != "."))]
+        ##careful for index here change it later
+        return [x for x in range(51) if (string.find(str(x)) != -1 and 
+                                        (string.find(str(x)) == 0 or string[(string.find(str(x)) -1)] != "." or
+                                        string.find(str(x)) == 1 or string[(string.find(str(x)) -2)] != "."))]
 
     def words_to_digits(string):
         tens = {
