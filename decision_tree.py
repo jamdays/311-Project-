@@ -14,7 +14,7 @@ import json
 
 
 
-np.random.seed(42)
+np.random.seed(43)
 
 # Load the data
 df = pd.read_csv("./data/clean_data.csv")
@@ -145,7 +145,6 @@ def export_tree_structure(decision_tree, feature_names):
 # Export the tree structure
 feature_names = X_train.columns.tolist()
 tree_structure = export_tree_structure(model, feature_names)
-print(tree_structure)
 
 with open("decision_tree_structure.json", "w") as f:
     json.dump(tree_structure, f, indent=4)
@@ -165,9 +164,9 @@ def predict(tree_structure, input):
 forest_model = RandomForestClassifier(n_estimators=100, max_depth=optimal[0], min_samples_split=optimal[1])
 forest_model.fit(X_train, T_train)
 
-print(forest_model.score(X_train, T_train))
-print(forest_model.score(X_valid, T_valid))
-print(forest_model.score(X_test, T_test))
+print("Training score forest: " + str(forest_model.score(X_train, T_train)))
+print("Validation score forest: " + str(forest_model.score(X_valid, T_valid)))
+print("Test score forest: " + str(forest_model.score(X_test, T_test)))
 
 def export_forest_structure(forest, feature_names):
     """
