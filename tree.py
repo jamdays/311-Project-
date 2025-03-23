@@ -1,7 +1,7 @@
 import json
 import numpy as np
 import pandas as pd
-from scripts import clean_data
+
 class Tree:
     def __init__(self):
         self.root = None
@@ -31,36 +31,16 @@ class Tree:
             predictions.append(self.predict_one(row))
         return predictions
 
-class RandomForest:
-    def __init__(self):
-        self.trees = []
-    
-    def load_structure(self, filename):
-        with open(filename, 'r') as f:
-            forest_structure = json.load(f)
-        for tree_structure in forest_structure:
-            tree = Tree()
-            tree.set_structure(tree_structure)
-            self.trees.append(tree)
-    
-    def predict_one(self, input):
-        predictions = [tree.predict_one(input) for tree in self.trees]
-        unique, counts = np.unique(predictions, return_counts=True)
-        return unique[np.argmax(counts)]
-
-    def predict_all(self, df):
-        predictions = []
-        for index, row in df.iterrows():
-            predictions.append(self.predict_one(row))
-        return predictions
-
-def predict_all(filename):
-    forest = RandomForest()
-    forest.load_structure("forest_structure.json")
-    df = pd.read_csv(filename)
-    X, T = clean_data(df)
-    return forest.predict_all(X)
-
 if __name__ == "__main__":
-    predictions = predict_all("data/cleaned_data_combined_modified.csv")
-    print(predictions)
+    # Test to see if it runs
+    tree = Tree()
+    tree.load_structure("decision_tree_structure.json")
+    X = pd.read_csv("data/clean_data.csv")
+    T = pd.read_csv("data/cleaned_data_combined_modified.csv")["Label"]
+    accuracy = 0
+    predictions = tree.predict_all(X)
+    for i in range(len(X)):
+        if (predictions[i] == T.iloc[i]):
+            accuracy += 1
+    accuracy = accuracy / len(X)
+    print(accuracy)

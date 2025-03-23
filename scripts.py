@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import json
 __all__ = ['clean_data']
 
 def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -39,7 +40,7 @@ def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     movies = "Q5: What movie do you think of when thinking of this food item?"
     global vocab
-    movie_vocab = {}
+    movie_vocab = json.load(open("movie_vocab.json", "r"))
     def clean_movie(movie):
         movie = str(movie)
         for char in movie:
@@ -47,9 +48,6 @@ def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
                 movie = movie.replace(char, '')
         movie = movie.lower()
         movie_as_list = movie.split()
-        for word in movie_as_list:
-            if word not in movie_vocab:
-                movie_vocab[word] = len(movie_vocab)
         return movie_as_list
 
     df[movies] = df[movies].apply(clean_movie)
@@ -198,8 +196,10 @@ def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     def clean_complexity(complexity: str) -> int:
         return int(complexity)
-
-    df["num_ingredients"] = df["Q2: How many ingredients would you expect this food item to contain?"].apply(clean_num_ingredients)
+    if df["Q2: How many ingredients would you expect this food item to contain?"].dtype == "int64":
+        df["num_ingredients"] = df["Q2: How many ingredients would you expect this food item to contain?"]
+    else:
+        df["num_ingredients"] = df["Q2: How many ingredients would you expect this food item to contain?"].apply(clean_num_ingredients)
     df.drop(columns=["Q2: How many ingredients would you expect this food item to contain?"], inplace=True)
 
     df["complexity"] = df["Q1: From a scale 1 to 5, how complex is it to make this food? (Where 1 is the most simple, and 5 is the most complex)"].apply(clean_complexity)
@@ -223,7 +223,7 @@ def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     df.drop(columns=[time_col], inplace=True)
 
     global drink_vocab
-    drink_vocab = {}
+    drink_vocab = json.load(open("drink_vocab.json", "r"))
 
     def clean_text(text):
         """
@@ -234,11 +234,6 @@ def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         text = ''.join([char if char.isalpha() or char.isspace() else ' ' for char in text])  # Keep letters and spaces
         text = text.lower().strip()  # Convert to lowercase and remove extra spaces
         words = text.split()  # Tokenize into words
-
-        # Update vocabulary with unique words from the column
-        for word in words:
-            if word not in drink_vocab:
-                drink_vocab[word] = len(drink_vocab)  # Assign a unique index
 
         return words  # Return cleaned tokenized words
 
@@ -278,7 +273,10 @@ def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     # Drop the original people column
     df.drop(columns=[hot_sauce_col], inplace=True)
-
+    # with open("data/drink_vocab.json", "w") as f:
+    #     json.dump(drink_vocab, f)
+    # with open("data/movie_vocab.json", "w") as f:
+    #     json.dump(movie_vocab, f)
     return df, dataframe["Label"]
 
 if __name__ == "__main__":

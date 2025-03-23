@@ -120,12 +120,6 @@ fig.colorbar(surf, ax=ax, shrink=0.5, aspect=10)
 # Show the plot
 plt.show()
 
-# random_forest_model = RandomForestClassifier(n_estimators=100, max_depth=optimal[0], min_samples_split=optimal[1])
-# random_forest_model.fit(X_train, T_train)
-# print(random_forest_model.score(X_train, T_train))
-# print(random_forest_model.score(X_valid, T_valid))
-# print(random_forest_model.score(X_test, T_test))
-
 # Extract feature importances
 
 def export_tree_structure(decision_tree, feature_names):
@@ -168,6 +162,27 @@ def predict(tree_structure, input):
     prediction = ["Pizza", "Shawarma", "Sushi"][prediction]
     return prediction
 
+forest_model = RandomForestClassifier(n_estimators=100, max_depth=optimal[0], min_samples_split=optimal[1])
+forest_model.fit(X_train, T_train)
+
+print(forest_model.score(X_train, T_train))
+print(forest_model.score(X_valid, T_valid))
+print(forest_model.score(X_test, T_test))
+
+def export_forest_structure(forest, feature_names):
+    """
+    Exports the structure of a random forest into a list of tree structures.
+    """
+    forest_structure = []
+    for tree in forest.estimators_:
+        tree_structure = export_tree_structure(tree, feature_names)
+        forest_structure.append(tree_structure)
+    return forest_structure
+
+forest_structure = export_forest_structure(forest_model, feature_names)
+
+with open("forest_structure.json", "w") as f:
+    json.dump(forest_structure, f, indent=4)
 
 # Making sure that predictions from tree_structure and model are the same
 
