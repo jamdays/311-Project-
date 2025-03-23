@@ -262,7 +262,7 @@ def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     hot_sauce_col = "Q8: How much hot sauce would you add to this food item?"
 
     # Get rid of NaNs
-    df[hot_sauce_col] = df[hot_sauce_col].fillna('')
+    df[hot_sauce_col] = df[hot_sauce_col].fillna('None')
 
     # Hardcoded categories
     unique_categories = {"mild", "medium", "hot", "None"}
@@ -282,5 +282,7 @@ def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 if __name__ == "__main__":
     df = pd.read_csv("data/cleaned_data_combined_modified.csv")
     X, T = clean_data(df)
+    with open("data/clean_data.csv", "w", encoding="utf-8") as f:
+        X.to_csv(f, index=False)
     print(X)
     print(T)
