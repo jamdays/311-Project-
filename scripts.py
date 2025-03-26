@@ -74,7 +74,7 @@ def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     def find_digits(string):
     ##careful for index here change it later
-    return [x for x in range(51) if (string.find(str(x)) != -1 and 
+        return [x for x in range(51) if (string.find(str(x)) != -1 and 
                                      (string.find(str(x)) == 0 or string[(string.find(str(x)) -1)] != "." or
                                      string.find(str(x)) == 1 or string[(string.find(str(x)) -2)] != "."))]
 
