@@ -1,9 +1,10 @@
 import pandas as pd
 import numpy as np
+import re
 import json
 __all__ = ['clean_data']
 
-def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+def clean_data(dataframe: pd.DataFrame, clean_type="normal") -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Takes in as input a dataframe and returns two dataframes:
     X: a dataframe containing the cleaned features
@@ -27,7 +28,7 @@ def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     df[people_col] = df[people_col].fillna('')
 
     # Hardcoded categories
-    unique_categories = {"Friends", "Teachers", "Strangers", "Family", "Siblings"}
+    unique_categories = {"Friends", "Teachers", "Strangers", "Parents", "Siblings"}
 
     # Create new indicators for each unique category
     for category in unique_categories:
@@ -35,32 +36,33 @@ def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     # Drop the original people column
     df.drop(columns=[people_col], inplace=True)
-
-    # Turn movies into BoW indicators
-
+    
     movies = "Q5: What movie do you think of when thinking of this food item?"
-    global vocab
-    movie_vocab = json.load(open("movie_vocab.json", "r"))
-    def clean_movie(movie):
-        movie = str(movie)
-        for char in movie:
-            if not char.isalpha() and not char.isspace():
-                movie = movie.replace(char, '')
-        movie = movie.lower()
-        movie_as_list = movie.split()
-        return movie_as_list
 
-    df[movies] = df[movies].apply(clean_movie)
+    # Turn movies into BoW indicators if we're including them
+    if clean_type=="normal":
+        global vocab
+        movie_vocab = json.load(open("movie_vocab.json", "r"))
+        def clean_movie(movie):
+            movie = str(movie)
+            for char in movie:
+                if not char.isalpha() and not char.isspace():
+                    movie = movie.replace(char, '')
+            movie = movie.lower()
+            movie_as_list = movie.split()
+            return movie_as_list
 
-    new_column_names = [f"movie_{word}" for word in movie_vocab.keys()]
+        df[movies] = df[movies].apply(clean_movie)
 
-    bag_of_word_indicators = pd.DataFrame([
-        [1 if word in words else 0 for word in movie_vocab]
-        for words in df[movies]
-    ], columns=new_column_names)
+        new_column_names = [f"movie_{word}" for word in movie_vocab.keys()]
+
+        bag_of_word_indicators = pd.DataFrame([
+            [1 if word in words else 0 for word in movie_vocab]
+            for words in df[movies]
+        ], columns=new_column_names)
 
 
-    df = pd.concat([df, bag_of_word_indicators], axis=1)
+        df = pd.concat([df, bag_of_word_indicators], axis=1)
     df.drop(columns=[movies], inplace=True)
 
     # Clean price
@@ -159,40 +161,27 @@ def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
         return 0
 
 
-    def clean_num_ingredients(num_ingredients: str) -> int:
-        x = 0
-        i = 1
-        nums_present = []
+    def clean_num_ingredients(num_ingredients) -> int:
+        str_num = str(num_ingredients)
         clean_nums_present = []
-        while x < len(num_ingredients):
-            while i <= len(num_ingredients):
-                if is_number(num_ingredients[x:i]):
-                    found_num = i
-                    i += 1
-                    while is_number(num_ingredients[x:i]) and i <= len(num_ingredients):
-                        found_num = i
-                        i += 1
-                    nums_present.append(num_ingredients[x:found_num])
-                    x = found_num
-                    i = found_num
-                i += 1
-            x += 1
-            i = x + 1
-
-        for num in nums_present:
-            if is_digit(num[0]):
-                clean_nums_present.append(int(num))
-            else:
-                clean_nums_present.append(string_num_to_int(num))
+        nums_present = [m.group() for m in re.finditer(r'\d+', str_num)]
+        words = ["zero", "one", "two", "three", "four", "five",
+                "six", "seven", "eight", "nine", "ten", "eleven",
+                "twelve", "twenty", "fifty", "hundred"]
+        pattern = r'\b(?:' + r'|'.join(map(re.escape, words)) + r')\b'
+        word_nums = re.findall(pattern, str_num, re.IGNORECASE)
+        for n in nums_present:
+            clean_nums_present.append(int(n))
+        for n in word_nums:
+            clean_nums_present.append(string_num_to_int(n.lower()))
         if len(clean_nums_present) > 0:
             return round(sum(clean_nums_present)/len(clean_nums_present))
-        elif "," in num_ingredients:
-            return num_ingredients.count(",") + 1
-        elif " " in num_ingredients:
-            return num_ingredients.count(" ") + 1
+        elif "," in str_num:
+            return str_num.count(",") + 1
+        elif " " in str_num:
+            return str_num.count(" ") + 1
         else:
             return 0
-
 
     def clean_complexity(complexity: str) -> int:
         return int(complexity)
@@ -222,39 +211,40 @@ def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     # Drop the original people column
     df.drop(columns=[time_col], inplace=True)
 
-    global drink_vocab
-    drink_vocab = json.load(open("drink_vocab.json", "r"))
-
-    def clean_text(text):
-        """
-        Cleans text by removing punctuation, converting to lowercase,
-        and tokenizing words while updating the global vocabulary.
-        """
-        text = str(text)  # Ensure input is a string
-        text = ''.join([char if char.isalpha() or char.isspace() else ' ' for char in text])  # Keep letters and spaces
-        text = text.lower().strip()  # Convert to lowercase and remove extra spaces
-        words = text.split()  # Tokenize into words
-
-        return words  # Return cleaned tokenized words
-
-    # Select the 6th column (index 5, since indexing starts at 0)
+    # Turn drinks into BoW if we're using them
     column_name = "Q6: What drink would you pair with this food item?"
+    if clean_type=="normal" or clean_type=="no_movies":
+        global drink_vocab
+        drink_vocab = json.load(open("drink_vocab.json", "r"))
 
-    # Apply text cleaning function only to the 6th column
-    df[column_name] = df[column_name].apply(clean_text)
+        def clean_text(text):
+            """
+            Cleans text by removing punctuation, converting to lowercase,
+            and tokenizing words while updating the global vocabulary.
+            """
+            text = str(text)  # Ensure input is a string
+            text = ''.join([char if char.isalpha() or char.isspace() else ' ' for char in text])  # Keep letters and spaces
+            text = text.lower().strip()  # Convert to lowercase and remove extra spaces
+            words = text.split()  # Tokenize into words
 
-    new_column_names = [f"drink_{word}" for word in drink_vocab.keys()]
+            return words  # Return cleaned tokenized words
 
-    # Construct Bag of Words representation only for the 6th column
-    bag_of_word_indicators = pd.DataFrame([
-        [1 if word in words else 0 for word in drink_vocab]  # Encode word presence
-        for words in df[column_name]
-    ], columns=new_column_names)
 
-    # Merge BoW indicators with the original DataFrame (keeping all columns intact)
-    df = pd.concat([df, bag_of_word_indicators], axis=1)
+        # Apply text cleaning function only to the 6th column
+        df[column_name] = df[column_name].apply(clean_text)
 
-    # Drop the original text column (optional)
+        new_column_names = [f"drink_{word}" for word in drink_vocab.keys()]
+
+        # Construct Bag of Words representation only for the 6th column
+        bag_of_word_indicators = pd.DataFrame([
+            [1 if word in words else 0 for word in drink_vocab]  # Encode word presence
+            for words in df[column_name]
+        ], columns=new_column_names)
+
+        # Merge BoW indicators with the original DataFrame (keeping all columns intact)
+        df = pd.concat([df, bag_of_word_indicators], axis=1)
+
+    # Drop the original text column
     df.drop(columns=[column_name], inplace=True)
 
     # Add indicator variables to categorical variable hot sauce
@@ -273,16 +263,13 @@ def clean_data(dataframe: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     # Drop the original people column
     df.drop(columns=[hot_sauce_col], inplace=True)
-    # with open("data/drink_vocab.json", "w") as f:
-    #     json.dump(drink_vocab, f)
-    # with open("data/movie_vocab.json", "w") as f:
-    #     json.dump(movie_vocab, f)
     return df, dataframe["Label"]
+
 
 if __name__ == "__main__":
     df = pd.read_csv("data/cleaned_data_combined_modified.csv")
     X, T = clean_data(df)
-    with open("data/clean_data.csv", "w", encoding="utf-8") as f:
+    with open("data/clean_data_no_movies.csv", "w", encoding="utf-8") as f:
         X.to_csv(f, index=False)
     print(X)
     print(T)

@@ -58,7 +58,7 @@ def predict_all(filename):
     forest = RandomForest()
     forest.load_structure("forest_structure.json")
     df = pd.read_csv(filename)
-    X, T = clean_data(df)
+    X, T = clean_data(df, clean_type="no_words")
     return forest.predict_all(X)
 
 if __name__ == "__main__":
